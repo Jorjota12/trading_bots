@@ -23,11 +23,10 @@ def get_exchange():
 
 
 def fetch_ohlcv(exchange, timeframe: str, limit: int = 200) -> pd.DataFrame:
-    """
-    Descarga las últimas `limit` velas del par configurado.
-    Devuelve un DataFrame con columnas: timestamp, open, high, low, close, volume
-    """
+    import logging
+    logging.getLogger("exchange").info(f"Fetching OHLCV {timeframe}...")
     raw = exchange.fetch_ohlcv(SYMBOL, timeframe=timeframe, limit=limit)
+    logging.getLogger("exchange").info(f"OHLCV OK — {len(raw)} velas")
     df = pd.DataFrame(raw, columns=["timestamp", "open", "high", "low", "close", "volume"])
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
     df.set_index("timestamp", inplace=True)
