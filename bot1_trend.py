@@ -153,7 +153,16 @@ def run():
     while True:
         try:
             df = fetch_ohlcv(exchange, TIMEFRAME_BOT1, CANDLES_LIMIT)
-            df = compute_indicators(df)
+            df = fetch_ohlcv(exchange, TIMEFRAME_BOT1, CANDLES_LIMIT)
+            try:
+                df = compute_indicators(df)
+                log.info(f"Indicadores OK | ADX: {df['adx'].iloc[-1]:.1f} | Vol: {df['vol_ratio'].iloc[-1]:.2f}")
+            except Exception as e:
+                import traceback
+                log.error(f"Error en compute_indicators: {e}")
+                log.error(traceback.format_exc())
+                time.sleep(LOOP_INTERVAL_BOT1)
+                continue
 
             current_price = get_current_price(exchange)
             atr           = df["atr"].iloc[-1]
