@@ -35,7 +35,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [BOT3-MOMENTUM] %(me
 log = logging.getLogger("bot3")
 
 BOT_NAME         = "Bot3_Momentum"
-VOL_RATIO        = 2.0    # Volumen debe ser 2× la media (más estricto que antes)
+VOL_RATIO        = 1.2    # Volumen debe ser 2× la media (más estricto que antes)
 VOLUME_WINDOW    = 20
 BREAKOUT_WINDOW  = 20     # Mirar máximos/mínimos de las últimas 20 velas
 CANDLE_SIZE_MIN  = 0.4    # La vela de breakout debe ser > 0.4 × ATR

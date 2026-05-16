@@ -38,7 +38,7 @@ BOT_NAME        = "Bot1_Trend"
 ADX_THRESHOLD   = 25      # Mínimo ADX para considerar que hay tendencia
 COOLDOWN_MIN    = 15      # Minutos mínimos entre trades
 TRAIL_FACTOR    = 0.5     # Trailing stop: mover SL cuando ganancia > 0.5 × ATR
-VOL_FILTER      = 1.2     # Volumen debe ser 1.2× la media para entrar
+VOL_FILTER      = 0.8     # Volumen debe ser 1.2× la media para entrar
 
 
 # ── Indicadores ──────────────────────────────────────────────────────────────
