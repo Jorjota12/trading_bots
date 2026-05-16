@@ -1,10 +1,5 @@
 # =============================================================================
-# main.py — Lanza los 3 bots en paralelo usando threads
-# =============================================================================
-# Uso:
-#   python main.py              → lanza los 3 bots
-#   python main.py --bot 1      → lanza solo el Bot 1
-#   python main.py --compare    → muestra el dashboard y sale
+# main.py — Lanza los 3 bots en paralelo + servidor de datos para el dashboard
 # =============================================================================
 
 import threading
@@ -12,6 +7,10 @@ import argparse
 import logging
 import signal
 import sys
+import json
+import csv
+import os
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from colorama import init, Fore, Style
 
 import bot1_trend
@@ -34,8 +33,96 @@ BOTS = {
 }
 
 
-def launch_bot(name: str, run_fn):
-    """Wrapper que relanza el bot si peta inesperadamente."""
+# ── Servidor de datos ─────────────────────────────────────────────────────────
+
+def load_trades():
+    from config import LOG_FILE
+    trades = []
+    if not os.path.exists(LOG_FILE):
+        return trades
+    with open(LOG_FILE, newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            trades.append(row)
+    return trades
+
+
+def calc_stats(trades):
+    bots = ["Bot1_Trend", "Bot2_MeanReversion", "Bot3_Momentum"]
+    stats = {}
+    for bot in bots:
+        bot_trades = [t for t in trades if t["bot"] == bot]
+        if not bot_trades:
+            stats[bot] = {}
+            continue
+        pnls   = [float(t["pnl_usdt"]) for t in bot_trades]
+        wins   = [p for p in pnls if p > 0]
+        losses = [p for p in pnls if p <= 0]
+        total  = len(pnls)
+        gross_profit = sum(wins) if wins else 0
+        gross_loss   = abs(sum(losses)) if losses else 1
+        pf = gross_profit / gross_loss if gross_loss > 0 else 0
+        cumulative = []
+        c = 0
+        for p in pnls:
+            c += p
+            cumulative.append(c)
+        peak = cumulative[0] if cumulative else 0
+        max_dd = 0
+        for val in cumulative:
+            if val > peak:
+                peak = val
+            dd = val - peak
+            if dd < max_dd:
+                max_dd = dd
+        stats[bot] = {
+            "trades":        total,
+            "win_rate":      round(len(wins) / total * 100 if total else 0, 1),
+            "total_pnl":     round(sum(pnls), 2),
+            "profit_factor": round(pf, 2),
+            "max_drawdown":  round(max_dd, 2),
+        }
+    return stats
+
+
+class DataHandler(BaseHTTPRequestHandler):
+    def log_message(self, format, *args):
+        pass
+
+    def do_GET(self):
+        headers = {
+            "Access-Control-Allow-Origin": "*",
+            "Content-Type": "application/json",
+        }
+        if self.path in ["/data", "/"]:
+            trades  = load_trades()
+            stats   = calc_stats(trades)
+            payload = json.dumps({
+                "trades": trades,
+                "stats":  stats,
+                "status": "running",
+                "bots":   3,
+            })
+            self.send_response(200)
+            for k, v in headers.items():
+                self.send_header(k, v)
+            self.end_headers()
+            self.wfile.write(payload.encode())
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+
+def run_data_server():
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(("0.0.0.0", port), DataHandler)
+    logging.info(Fore.CYAN + f"Servidor de datos en puerto {port}")
+    server.serve_forever()
+
+
+# ── Bots ──────────────────────────────────────────────────────────────────────
+
+def launch_bot(name, run_fn):
     while True:
         try:
             logging.info(Fore.CYAN + f"▶ Iniciando {name}...")
@@ -53,17 +140,15 @@ def handle_exit(sig, frame):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Sistema de trading bots — Crypto Scalping")
-    parser.add_argument("--bot",     type=int, choices=[1, 2, 3], help="Lanzar solo un bot concreto")
-    parser.add_argument("--compare", action="store_true",          help="Mostrar dashboard y salir")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--bot",     type=int, choices=[1, 2, 3])
+    parser.add_argument("--compare", action="store_true")
     args = parser.parse_args()
 
-    # Solo mostrar el dashboard
     if args.compare:
         comparator.main()
         return
 
-    # Capturar Ctrl+C para mostrar reporte al salir
     signal.signal(signal.SIGINT, handle_exit)
 
     print(Fore.CYAN + Style.BRIGHT + """
@@ -73,9 +158,12 @@ def main():
 ╚══════════════════════════════════════════════╝
     """)
 
-    # Decidir qué bots lanzar
-    bots_to_run = {args.bot: BOTS[args.bot]} if args.bot else BOTS
+    # Lanzar servidor de datos en background
+    t_server = threading.Thread(target=run_data_server, daemon=True, name="data-server")
+    t_server.start()
 
+    # Lanzar bots
+    bots_to_run = {args.bot: BOTS[args.bot]} if args.bot else BOTS
     threads = []
     for bot_id, (name, run_fn) in bots_to_run.items():
         t = threading.Thread(
@@ -90,7 +178,6 @@ def main():
 
     print(Fore.YELLOW + "\n  Pulsa Ctrl+C para detener y ver el reporte final.\n")
 
-    # Mantener el hilo principal vivo
     for t in threads:
         t.join()
 

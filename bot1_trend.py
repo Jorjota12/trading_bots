@@ -24,6 +24,7 @@ from config import SYMBOL, TIMEFRAME_BOT1, CANDLES_LIMIT, LOOP_INTERVAL_BOT1, MA
 from exchange import get_exchange, fetch_ohlcv, get_current_price
 from risk_manager import calc_position_size, calc_sl_tp, check_sl_tp
 from logger import init_log, log_trade
+from shared_state import try_acquire, release
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [BOT1-TREND] %(message)s")
 log = logging.getLogger("bot1")
@@ -115,12 +116,13 @@ def run():
                         position["entry_time"], exit_time
                     )
                     log.info(f"CIERRE [{result.upper()}] | Precio: {current_price} | PnL: {pnl:.2f} USDT ({pnl_pct:.2f}%)")
+                    release(BOT_NAME)
                     position = None
 
             # ── Buscar nueva entrada si no hay posición ──
             if position is None:
                 signal = get_signal(df)
-                if signal:
+                if signal and try_acquire(BOT_NAME):
                     size           = calc_position_size(current_price, atr)
                     sl, tp         = calc_sl_tp(current_price, atr, signal)
                     position = {

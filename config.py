@@ -21,15 +21,15 @@ SYMBOL = "BTC/USDT"   # Cambia a "ETH/USDT", "BNB/USDT", etc. si quieres
 
 # --- Gestión de riesgo global ---
 CAPITAL_PER_BOT    = 1000.0   # USDT simulados que asignas a cada bot
-RISK_PER_TRADE     = 0.01     # Arriesgar máx. 1% del capital por operación
+RISK_PER_TRADE     = 0.005    # Arriesgar máx. 1% del capital por operación
 MAX_OPEN_TRADES    = 1        # Máximo de posiciones abiertas simultáneas por bot
-ATR_SL_MULTIPLIER  = 1.5      # Stop Loss = entrada ± (ATR × este valor)
-ATR_TP_MULTIPLIER  = 3.0      # Take Profit = entrada ± (ATR × este valor)
+ATR_SL_MULTIPLIER  = 2.5      # Stop Loss = entrada ± (ATR × este valor)
+ATR_TP_MULTIPLIER  = 5.0      # Take Profit = entrada ± (ATR × este valor)
 
 # --- Timeframes por bot ---
 TIMEFRAME_BOT1 = "5m"    # Trend Follower
 TIMEFRAME_BOT2 = "3m"    # Mean Reversion
-TIMEFRAME_BOT3 = "1m"    # Momentum
+TIMEFRAME_BOT3 = "5m"    # Momentum
 
 # --- Cuántas velas cargar para calcular indicadores ---
 CANDLES_LIMIT = 200
@@ -38,7 +38,7 @@ CANDLES_LIMIT = 200
 # Bot 1 revisa cada 5 min, Bot 2 cada 3, Bot 3 cada 1
 LOOP_INTERVAL_BOT1 = 300
 LOOP_INTERVAL_BOT2 = 180
-LOOP_INTERVAL_BOT3 = 60
+LOOP_INTERVAL_BOT3 = 300
 
 # --- Fichero de log de operaciones ---
 LOG_FILE = "trades_log.csv"
