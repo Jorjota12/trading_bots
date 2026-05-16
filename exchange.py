@@ -12,6 +12,7 @@ def get_exchange():
         "apiKey": API_KEY,
         "secret": API_SECRET,
         "enableRateLimit": True,
+        "timeout": 30000,  # 30 segundos máximo por llamada
         "options": {
             "defaultType": "spot",
             "adjustForTimeDifference": True,

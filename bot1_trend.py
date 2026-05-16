@@ -209,6 +209,10 @@ def run():
             import traceback
             log.error(f"Error en el bucle: {e}")
             log.error(traceback.format_exc())
+            try:
+                exchange = get_exchange()  # reconectar
+            except Exception:
+                pass
 
         time.sleep(LOOP_INTERVAL_BOT1)
 
