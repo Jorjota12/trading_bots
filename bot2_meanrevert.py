@@ -200,7 +200,9 @@ def run():
                     log.info(f"ENTRADA [{signal.upper()}] | Precio: {current_price} | RSI: {df['rsi'].iloc[-1]:.1f} | SL: {sl} | TP: {tp}")
 
         except Exception as e:
+            import traceback
             log.error(f"Error en el bucle: {e}")
+            log.error(traceback.format_exc())
 
         time.sleep(LOOP_INTERVAL_BOT2)
 

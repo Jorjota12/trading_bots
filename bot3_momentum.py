@@ -213,7 +213,9 @@ def run():
                         log.info(f"ENTRADA [{signal.upper()}] | Breakout confirmado | Precio: {current_price} | Vol: {df['vol_ratio'].iloc[-1]:.1f}x | SL: {sl} | TP: {tp}")
 
         except Exception as e:
+            import traceback
             log.error(f"Error en el bucle: {e}")
+            log.error(traceback.format_exc())
 
         time.sleep(LOOP_INTERVAL_BOT3)
 
