@@ -109,7 +109,9 @@ def get_signal(df: pd.DataFrame) -> str | None:
         return "buy"
     if trend_down and macd_cross_down and hist_falling:
         return "sell"
+    log.info(f"Sin señal | ADX: {last['adx']:.1f} | Vol: {last['vol_ratio']:.2f}x | EMA9>21>50: {trend_up} | EMA9<21<50: {trend_down}")
     return None
+    
 
 
 # ── Trailing Stop ─────────────────────────────────────────────────────────────

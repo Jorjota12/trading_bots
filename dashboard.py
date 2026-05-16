@@ -12,6 +12,7 @@
 import json
 import csv
 import os
+import io
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from config import LOG_FILE, CAPITAL_PER_BOT
 
@@ -500,13 +501,12 @@ GITHUB_PATH  = "trades_log.csv"
 
 
 def load_data():
-    """Descarga el trades_log.csv desde GitHub."""
-    import urllib.request, io
+    import requests, io
     url = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/main/{GITHUB_PATH}"
     try:
-        with urllib.request.urlopen(url) as resp:
-            content = resp.read().decode("utf-8")
-        reader = csv.DictReader(io.StringIO(content))
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        reader = csv.DictReader(io.StringIO(resp.text))
         return list(reader)
     except Exception:
         return []
@@ -583,7 +583,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    port = 5000
+    port = 5001
     server = HTTPServer(("localhost", port), Handler)
     print(f"Dashboard en vivo → http://localhost:{port}")
     print("Ctrl+C para detener")
