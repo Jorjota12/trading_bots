@@ -38,7 +38,7 @@ BOT_NAME        = "Bot1_Trend"
 ADX_THRESHOLD   = 25      # Mínimo ADX para considerar que hay tendencia
 COOLDOWN_MIN    = 15      # Minutos mínimos entre trades
 TRAIL_FACTOR    = 0.5     # Trailing stop: mover SL cuando ganancia > 0.5 × ATR
-VOL_FILTER      = 0.8     # Volumen debe ser 1.2× la media para entrar
+VOL_FILTER      = 0     # Volumen debe ser 1.2× la media para entrar
 
 
 # ── Indicadores ──────────────────────────────────────────────────────────────
@@ -91,9 +91,6 @@ def get_signal(df: pd.DataFrame) -> str | None:
     if last["adx"] < ADX_THRESHOLD:
         return None
 
-    # Filtro de volumen — confirmar convicción
-    if last["vol_ratio"] < VOL_FILTER:
-        return None
 
     trend_up   = last["ema9"] > last["ema21"] > last["ema50"]
     trend_down = last["ema9"] < last["ema21"] < last["ema50"]
