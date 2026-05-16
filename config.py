@@ -23,7 +23,7 @@ SYMBOL = "BTC/USDT"   # Cambia a "ETH/USDT", "BNB/USDT", etc. si quieres
 CAPITAL_PER_BOT    = 1000.0   # USDT simulados que asignas a cada bot
 RISK_PER_TRADE     = 0.005    # Arriesgar máx. 1% del capital por operación
 MAX_OPEN_TRADES    = 1        # Máximo de posiciones abiertas simultáneas por bot
-ATR_SL_MULTIPLIER  = 2.5      # Stop Loss = entrada ± (ATR × este valor)
+ATR_SL_MULTIPLIER  = 2.0      # Stop Loss = entrada ± (ATR × este valor)
 ATR_TP_MULTIPLIER  = 5.0      # Take Profit = entrada ± (ATR × este valor)
 
 # --- Timeframes por bot ---

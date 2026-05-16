@@ -494,16 +494,22 @@ setInterval(refresh, 10000);  // Refresca cada 10 segundos
 """
 
 
-def load_data():
-    trades = []
-    if not os.path.exists(LOG_FILE):
-        return trades
+GITHUB_USER  = "Jorjota12"
+GITHUB_REPO  = "trading_bots"
+GITHUB_PATH  = "trades_log.csv"
 
-    with open(LOG_FILE, newline="") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            trades.append(row)
-    return trades
+
+def load_data():
+    """Descarga el trades_log.csv desde GitHub."""
+    import urllib.request, io
+    url = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/main/{GITHUB_PATH}"
+    try:
+        with urllib.request.urlopen(url) as resp:
+            content = resp.read().decode("utf-8")
+        reader = csv.DictReader(io.StringIO(content))
+        return list(reader)
+    except Exception:
+        return []
 
 
 def calc_stats(trades):
