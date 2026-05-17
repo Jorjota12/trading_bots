@@ -10,20 +10,27 @@ import numpy as np
 from tabulate import tabulate
 from colorama import init, Fore, Style
 
-from config import LOG_FILE, CAPITAL_PER_BOT
+from config import CAPITAL_PER_BOT, log_file_for, SYMBOLS
 
 init(autoreset=True)
 
 
 def load_trades() -> pd.DataFrame:
-    try:
-        df = pd.read_csv(LOG_FILE)
-        df["entry_time"] = pd.to_datetime(df["entry_time"])
-        df["exit_time"]  = pd.to_datetime(df["exit_time"])
-        return df
-    except FileNotFoundError:
-        print(Fore.RED + f"No se encontró {LOG_FILE}. ¿Has ejecutado los bots ya?")
+    dfs = []
+    for symbol in SYMBOLS:
+        fname = log_file_for(symbol)
+        try:
+            df = pd.read_csv(fname)
+            dfs.append(df)
+        except FileNotFoundError:
+            pass
+    if not dfs:
+        print(Fore.RED + "No se encontraron archivos de trades.")
         return pd.DataFrame()
+    df = pd.concat(dfs, ignore_index=True)
+    df["entry_time"] = pd.to_datetime(df["entry_time"])
+    df["exit_time"]  = pd.to_datetime(df["exit_time"])
+    return df
 
 
 def calc_metrics(trades: pd.DataFrame, bot_name: str) -> dict:
