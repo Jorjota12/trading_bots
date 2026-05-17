@@ -1,0 +1,2 @@
+bot,symbol,side,entry_price,exit_price,size,pnl_usdt,pnl_pct,stop_loss,take_profit,exit_reason,entry_time,exit_time,duration_min
+Bot3_Momentum,BTC/USDT,sell,77916.55,78102.0,0.037421,-6.9397,-0.238,77977.848,77649.3186,sl,2026-05-17 14:16:46,2026-05-17 14:26:47,10.02
