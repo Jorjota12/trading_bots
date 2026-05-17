@@ -1,11 +1,6 @@
 # =============================================================================
 # config.py — Configuración global del sistema de trading bots
 # =============================================================================
-# Crea un archivo .env en la misma carpeta con:
-#   BINANCE_TESTNET_API_KEY=tu_api_key
-#   BINANCE_TESTNET_SECRET=tu_secret
-# Consigue las keys en: https://testnet.binance.vision/
-# =============================================================================
 
 import os
 from dotenv import load_dotenv
@@ -16,29 +11,30 @@ load_dotenv()
 API_KEY    = os.getenv("BINANCE_TESTNET_API_KEY", "")
 API_SECRET = os.getenv("BINANCE_TESTNET_SECRET", "")
 
-# --- Par a operar ---
-SYMBOL = "BTC/USDT"   # Cambia a "ETH/USDT", "BNB/USDT", etc. si quieres
+# --- Pares a operar ---
+SYMBOLS = ["BTC/USDT", "ETH/USDT", "SOL/USDT"]
 
 # --- Gestión de riesgo global ---
-CAPITAL_PER_BOT    = 1000.0   # USDT simulados que asignas a cada bot
-RISK_PER_TRADE     = 0.005    # Arriesgar máx. 1% del capital por operación
+CAPITAL_PER_BOT    = 1000.0   # USDT simulados por bot por par
+RISK_PER_TRADE     = 0.005    # Arriesgar máx. 0.5% del capital por operación
 MAX_OPEN_TRADES    = 1        # Máximo de posiciones abiertas simultáneas por bot
 ATR_SL_MULTIPLIER  = 2.0      # Stop Loss = entrada ± (ATR × este valor)
-ATR_TP_MULTIPLIER  = 5.0      # Take Profit = entrada ± (ATR × este valor)
+ATR_TP_MULTIPLIER  = 4.0      # Take Profit = entrada ± (ATR × este valor)
 
 # --- Timeframes por bot ---
 TIMEFRAME_BOT1 = "5m"    # Trend Follower
 TIMEFRAME_BOT2 = "3m"    # Mean Reversion
-TIMEFRAME_BOT3 = "5m"    # Momentum
+TIMEFRAME_BOT3 = "5m"    # Momentum Breakout
 
 # --- Cuántas velas cargar para calcular indicadores ---
 CANDLES_LIMIT = 200
 
 # --- Intervalo de ejecución de cada bot (segundos) ---
-# Bot 1 revisa cada 5 min, Bot 2 cada 3, Bot 3 cada 1
 LOOP_INTERVAL_BOT1 = 300
 LOOP_INTERVAL_BOT2 = 180
 LOOP_INTERVAL_BOT3 = 300
 
-# --- Fichero de log de operaciones ---
-LOG_FILE = "trades_log.csv"
+# --- Fichero de log por par ---
+def log_file_for(symbol: str) -> str:
+    """Devuelve el nombre del CSV para cada par. Ej: trades_BTC.csv"""
+    return f"trades_{symbol.split('/')[0]}.csv"

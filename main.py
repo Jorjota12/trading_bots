@@ -1,5 +1,5 @@
 # =============================================================================
-# main.py — Lanza los 3 bots en paralelo + servidor de datos para el dashboard
+# main.py — Lanza los 3 bots × 3 pares en paralelo (9 threads total)
 # =============================================================================
 
 import threading
@@ -26,62 +26,69 @@ logging.basicConfig(
     datefmt="%H:%M:%S"
 )
 
+from config import SYMBOLS, log_file_for
+
 BOTS = {
-    1: ("Bot1 — Trend Follower",    bot1_trend.run),
-    2: ("Bot2 — Mean Reversion",    bot2_meanrevert.run),
-    3: ("Bot3 — Momentum Breakout", bot3_momentum.run),
+    1: ("Trend Follower",    bot1_trend.run),
+    2: ("Mean Reversion",    bot2_meanrevert.run),
+    3: ("Momentum Breakout", bot3_momentum.run),
 }
 
 
 # ── Servidor de datos ─────────────────────────────────────────────────────────
 
-def load_trades():
-    from config import LOG_FILE
+def load_all_trades():
+    """Carga todos los CSVs de todos los pares."""
     trades = []
-    if not os.path.exists(LOG_FILE):
-        return trades
-    with open(LOG_FILE, newline="") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            trades.append(row)
+    for symbol in SYMBOLS:
+        fname = log_file_for(symbol)
+        if not os.path.exists(fname):
+            continue
+        with open(fname, newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                trades.append(row)
     return trades
 
 
 def calc_stats(trades):
     bots = ["Bot1_Trend", "Bot2_MeanReversion", "Bot3_Momentum"]
+    symbols = SYMBOLS
     stats = {}
+
     for bot in bots:
-        bot_trades = [t for t in trades if t["bot"] == bot]
-        if not bot_trades:
-            stats[bot] = {}
-            continue
-        pnls   = [float(t["pnl_usdt"]) for t in bot_trades]
-        wins   = [p for p in pnls if p > 0]
-        losses = [p for p in pnls if p <= 0]
-        total  = len(pnls)
-        gross_profit = sum(wins) if wins else 0
-        gross_loss   = abs(sum(losses)) if losses else 1
-        pf = gross_profit / gross_loss if gross_loss > 0 else 0
-        cumulative = []
-        c = 0
-        for p in pnls:
-            c += p
-            cumulative.append(c)
-        peak = cumulative[0] if cumulative else 0
-        max_dd = 0
-        for val in cumulative:
-            if val > peak:
-                peak = val
-            dd = val - peak
-            if dd < max_dd:
-                max_dd = dd
-        stats[bot] = {
-            "trades":        total,
-            "win_rate":      round(len(wins) / total * 100 if total else 0, 1),
-            "total_pnl":     round(sum(pnls), 2),
-            "profit_factor": round(pf, 2),
-            "max_drawdown":  round(max_dd, 2),
-        }
+        for symbol in symbols:
+            key = f"{bot}_{symbol.split('/')[0]}"
+            bt = [t for t in trades if t["bot"] == bot and t["symbol"] == symbol]
+            if not bt:
+                stats[key] = {}
+                continue
+            pnls   = [float(t["pnl_usdt"]) for t in bt]
+            wins   = [p for p in pnls if p > 0]
+            losses = [p for p in pnls if p <= 0]
+            total  = len(pnls)
+            gross_profit = sum(wins) if wins else 0
+            gross_loss   = abs(sum(losses)) if losses else 1
+            pf = gross_profit / gross_loss if gross_loss > 0 else 0
+            cumulative = []
+            c = 0
+            for p in pnls:
+                c += p
+                cumulative.append(c)
+            peak = cumulative[0] if cumulative else 0
+            max_dd = 0
+            for val in cumulative:
+                if val > peak: peak = val
+                dd = val - peak
+                if dd < max_dd: max_dd = dd
+            stats[key] = {
+                "bot": bot, "symbol": symbol,
+                "trades": total,
+                "win_rate": round(len(wins) / total * 100 if total else 0, 1),
+                "total_pnl": round(sum(pnls), 2),
+                "profit_factor": round(pf, 2),
+                "max_drawdown": round(max_dd, 2),
+            }
     return stats
 
 
@@ -95,13 +102,13 @@ class DataHandler(BaseHTTPRequestHandler):
             "Content-Type": "application/json",
         }
         if self.path in ["/data", "/"]:
-            trades  = load_trades()
+            trades  = load_all_trades()
             stats   = calc_stats(trades)
             payload = json.dumps({
-                "trades": trades,
-                "stats":  stats,
-                "status": "running",
-                "bots":   3,
+                "trades":  trades,
+                "stats":   stats,
+                "symbols": SYMBOLS,
+                "status":  "running",
             })
             self.send_response(200)
             for k, v in headers.items():
@@ -122,26 +129,24 @@ def run_data_server():
 
 # ── Bots ──────────────────────────────────────────────────────────────────────
 
-def launch_bot(name, run_fn):
+def launch_bot(name, run_fn, symbol):
     while True:
         try:
-            logging.info(Fore.CYAN + f"▶ Iniciando {name}...")
-            run_fn()
+            logging.info(Fore.CYAN + f"▶ Iniciando {name} [{symbol}]...")
+            run_fn(symbol)
         except Exception as e:
-            logging.error(Fore.RED + f"💥 {name} crasheó: {e}. Reiniciando en 10s...")
+            logging.error(Fore.RED + f"💥 {name} [{symbol}] crasheó: {e}. Reiniciando en 10s...")
             import time; time.sleep(10)
 
 
 def handle_exit(sig, frame):
     print(Fore.YELLOW + "\n\n⏹  Deteniendo todos los bots...")
-    print(Fore.CYAN   + "📊 Generando reporte final...\n")
     comparator.main()
     sys.exit(0)
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--bot",     type=int, choices=[1, 2, 3])
     parser.add_argument("--compare", action="store_true")
     args = parser.parse_args()
 
@@ -152,29 +157,29 @@ def main():
     signal.signal(signal.SIGINT, handle_exit)
 
     print(Fore.CYAN + Style.BRIGHT + """
-╔══════════════════════════════════════════════╗
-║      🤖 SISTEMA DE TRADING BOTS — CRYPTO     ║
-║         Paper Trading | Binance Testnet      ║
-╚══════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════╗
+║      🤖 SISTEMA DE TRADING BOTS — CRYPTO MULTI-PAR      ║
+║      BTC/USDT · ETH/USDT · SOL/USDT  |  Paper Trading  ║
+╚══════════════════════════════════════════════════════════╝
     """)
 
-    # Lanzar servidor de datos en background
+    # Servidor de datos
     t_server = threading.Thread(target=run_data_server, daemon=True, name="data-server")
     t_server.start()
 
-    # Lanzar bots
-    bots_to_run = {args.bot: BOTS[args.bot]} if args.bot else BOTS
+    # Lanzar 3 bots × 3 pares = 9 threads
     threads = []
-    for bot_id, (name, run_fn) in bots_to_run.items():
-        t = threading.Thread(
-            target=launch_bot,
-            args=(name, run_fn),
-            daemon=True,
-            name=f"bot-{bot_id}"
-        )
-        t.start()
-        threads.append(t)
-        print(Fore.GREEN + f"  ✅ {name} lanzado")
+    for symbol in SYMBOLS:
+        for bot_id, (name, run_fn) in BOTS.items():
+            t = threading.Thread(
+                target=launch_bot,
+                args=(f"Bot{bot_id} {name}", run_fn, symbol),
+                daemon=True,
+                name=f"bot{bot_id}-{symbol.split('/')[0]}"
+            )
+            t.start()
+            threads.append(t)
+            print(Fore.GREEN + f"  ✅ Bot{bot_id} {name} [{symbol}] lanzado")
 
     print(Fore.YELLOW + "\n  Pulsa Ctrl+C para detener y ver el reporte final.\n")
 

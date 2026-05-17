@@ -8,7 +8,6 @@ import json
 import base64
 import urllib.request
 from datetime import datetime
-from config import LOG_FILE
 
 HEADERS = [
     "bot", "symbol", "side", "entry_price", "exit_price",
@@ -19,24 +18,20 @@ HEADERS = [
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_USER  = "Jorjota12"
 GITHUB_REPO  = "trading_bots"
-GITHUB_PATH  = "trades_log.csv"
 
 
-def push_csv_to_github():
-    """Sube el trades_log.csv a GitHub después de cada trade."""
+def push_csv_to_github(log_file: str):
     if not GITHUB_TOKEN:
         return
     try:
-        with open(LOG_FILE, "rb") as f:
+        with open(log_file, "rb") as f:
             content = base64.b64encode(f.read()).decode()
 
-        url = f"https://api.github.com/repos/{GITHUB_USER}/{GITHUB_REPO}/contents/{GITHUB_PATH}"
+        url = f"https://api.github.com/repos/{GITHUB_USER}/{GITHUB_REPO}/contents/{log_file}"
         headers = {
             "Authorization": f"token {GITHUB_TOKEN}",
             "Content-Type": "application/json",
         }
-
-        # Obtener SHA del archivo actual (necesario para actualizarlo)
         sha = None
         try:
             req = urllib.request.Request(url, headers=headers)
@@ -46,7 +41,7 @@ def push_csv_to_github():
         except Exception:
             pass
 
-        payload = {"message": "update trades_log", "content": content}
+        payload = {"message": f"update {log_file}", "content": content}
         if sha:
             payload["sha"] = sha
 
@@ -58,13 +53,12 @@ def push_csv_to_github():
         )
         urllib.request.urlopen(req)
     except Exception:
-        pass  # No interrumpir los bots si falla el push
+        pass
 
 
-def init_log():
-    """Crea el CSV con cabeceras si no existe."""
-    if not os.path.exists(LOG_FILE):
-        with open(LOG_FILE, "w", newline="") as f:
+def init_log(log_file: str):
+    if not os.path.exists(log_file):
+        with open(log_file, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=HEADERS)
             writer.writeheader()
 
@@ -72,8 +66,8 @@ def init_log():
 def log_trade(bot_name: str, symbol: str, side: str,
               entry_price: float, exit_price: float, size: float,
               stop_loss: float, take_profit: float,
-              exit_reason: str, entry_time: datetime, exit_time: datetime):
-    """Registra un trade cerrado en el CSV y lo sube a GitHub."""
+              exit_reason: str, entry_time: datetime, exit_time: datetime,
+              log_file: str = "trades_BTC.csv"):
 
     pnl_usdt = (exit_price - entry_price) * size if side == "buy" \
                else (entry_price - exit_price) * size
@@ -97,11 +91,9 @@ def log_trade(bot_name: str, symbol: str, side: str,
         "duration_min": duration,
     }
 
-    with open(LOG_FILE, "a", newline="") as f:
+    with open(log_file, "a", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=HEADERS)
         writer.writerow(row)
 
-    # Subir CSV actualizado a GitHub
-    push_csv_to_github()
-
+    push_csv_to_github(log_file)
     return pnl_usdt, pnl_pct

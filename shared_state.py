@@ -1,35 +1,48 @@
 # =============================================================================
-# shared_state.py — Estado compartido entre los 3 bots
+# shared_state.py — Locks independientes por par
 # =============================================================================
-# Evita que dos bots abran posición al mismo tiempo en el mismo par
+# Cada par tiene su propio lock — BTC, ETH y SOL operan de forma independiente
+# Dentro de cada par, solo un bot puede tener posición abierta a la vez
 
 import threading
 
-# Lock global — solo un bot puede tener posición abierta a la vez
-_position_lock = threading.Lock()
-_active_bot    = None   # Qué bot tiene la posición ahora mismo
+_locks = {}
+_active = {}
+_lock_meta = threading.Lock()
 
 
-def try_acquire(bot_name: str) -> bool:
-    """Intenta adquirir el derecho a abrir una posición. Devuelve True si lo consigue."""
-    global _active_bot
-    acquired = _position_lock.acquire(blocking=False)
+def _get_lock(key: str) -> threading.Lock:
+    with _lock_meta:
+        if key not in _locks:
+            _locks[key] = threading.Lock()
+            _active[key] = None
+    return _locks[key]
+
+
+def try_acquire(bot_key: str) -> bool:
+    """
+    bot_key tiene formato "Bot1_Trend_BTC" — el lock es por par.
+    Extrae el par y bloquea solo ese par.
+    """
+    pair_key = bot_key.split("_")[-1]  # BTC, ETH, SOL
+    lock = _get_lock(pair_key)
+    acquired = lock.acquire(blocking=False)
     if acquired:
-        _active_bot = bot_name
+        with _lock_meta:
+            _active[pair_key] = bot_key
     return acquired
 
 
-def release(bot_name: str):
-    """Libera el lock cuando el bot cierra su posición."""
-    global _active_bot
-    if _active_bot == bot_name:
-        _active_bot = None
-        try:
-            _position_lock.release()
-        except RuntimeError:
-            pass  # ya estaba liberado
+def release(bot_key: str):
+    pair_key = bot_key.split("_")[-1]
+    lock = _get_lock(pair_key)
+    with _lock_meta:
+        _active[pair_key] = None
+    try:
+        lock.release()
+    except RuntimeError:
+        pass
 
 
-def who_has_position() -> str | None:
-    """Devuelve el nombre del bot que tiene posición abierta, o None."""
-    return _active_bot
+def who_has_position(pair: str) -> str | None:
+    return _active.get(pair)
