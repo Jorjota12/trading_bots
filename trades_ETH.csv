@@ -1,0 +1,2 @@
+bot,symbol,side,entry_price,exit_price,size,pnl_usdt,pnl_pct,stop_loss,take_profit,exit_reason,entry_time,exit_time,duration_min
+Bot1_Trend,ETH/USDT,sell,2183.02,2185.99,0.923727,-2.7435,-0.1361,2184.8661,2172.1943,sl,2026-05-17 15:17:35,2026-05-17 15:47:38,30.05
