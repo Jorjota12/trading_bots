@@ -1,0 +1,2 @@
+bot,symbol,side,entry_price,exit_price,size,pnl_usdt,pnl_pct,stop_loss,take_profit,exit_reason,entry_time,exit_time,duration_min
+Bot3_Momentum,SOL/USDT,buy,86.6,86.56,33.653846,-1.3462,-0.0462,86.6109,86.8971,sl,2026-05-17 16:28:25,2026-05-17 16:38:26,10.02
