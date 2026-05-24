@@ -12,7 +12,7 @@ API_KEY    = os.getenv("BINANCE_TESTNET_API_KEY", "")
 API_SECRET = os.getenv("BINANCE_TESTNET_SECRET", "")
 
 # --- Pares a operar ---
-SYMBOLS = ["SOL/USDT", "ETH/USDT", "XRP/USDT"]
+SYMBOLS = ["SOL/USDT", "XRP/USDT", "AVAX/USDT"]
 
 # --- Gestión de riesgo global ---
 CAPITAL_PER_BOT    = 1000.0   # USDT simulados por bot por par
