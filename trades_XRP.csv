@@ -1,0 +1,2 @@
+bot,symbol,side,entry_price,exit_price,size,pnl_usdt,pnl_pct,stop_loss,take_profit,exit_reason,entry_time,exit_time,duration_min
+Bot3_Momentum,XRP/USDT,sell,1.343,1.3366,2095.808383,13.4132,0.4765,1.3373,1.337,tp,2026-05-24 21:28:26,2026-05-24 21:38:27,10.02
