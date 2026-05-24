@@ -1,5 +1,10 @@
 # =============================================================================
-# bot2_meanrevert.py — Bot 2: Mean Reversion (v2) — Multi-par
+# bot2_meanrevert.py — Bot 2: Mean Reversion (v3) — Multi-par
+# =============================================================================
+# Cambios v3:
+#   - RSI ajustado a 32/68 (era 28/72) — más señales
+#   - Eliminado filtro anti-tendencia EMA spread — demasiado restrictivo
+#   - Mantenidos: confirmación de vela, ATR mínimo, timeout 60min
 # =============================================================================
 
 import time
@@ -16,9 +21,9 @@ from shared_state import try_acquire, release
 log = logging.getLogger("bot2")
 
 BOT_NAME       = "Bot2_MeanReversion"
-RSI_OVERSOLD   = 28
-RSI_OVERBOUGHT = 72
-ATR_MIN_FACTOR = 0.3
+RSI_OVERSOLD   = 32     # era 28 — más señales
+RSI_OVERBOUGHT = 68     # era 72 — más señales
+ATR_MIN_FACTOR = 0.2    # era 0.3 — menos restrictivo
 MAX_TRADE_MIN  = 60
 
 
@@ -35,8 +40,6 @@ def compute_indicators(df):
     high14 = df["high"].rolling(14).max()
     df["stoch_k"] = 100 * (df["close"] - low14) / (high14 - low14)
     df["stoch_d"] = df["stoch_k"].rolling(3).mean()
-    df["ema50"] = df["close"].ewm(span=50, adjust=False).mean()
-    df["ema20"] = df["close"].ewm(span=20, adjust=False).mean()
     high_low   = df["high"] - df["low"]
     high_close = (df["high"] - df["close"].shift()).abs()
     low_close  = (df["low"]  - df["close"].shift()).abs()
@@ -48,14 +51,16 @@ def compute_indicators(df):
 def get_signal(df):
     last = df.iloc[-1]
     prev = df.iloc[-2]
+
+    # Filtro ATR mínimo
     if (last["atr"] / last["close"] * 100) < ATR_MIN_FACTOR:
         return None
-    if abs(last["ema20"] - last["ema50"]) / last["close"] * 100 > 0.3:
-        return None
+
     stoch_up   = prev["stoch_k"] < prev["stoch_d"] and last["stoch_k"] > last["stoch_d"]
     stoch_down = prev["stoch_k"] > prev["stoch_d"] and last["stoch_k"] < last["stoch_d"]
     prev_bull  = prev["close"] > prev["open"]
     prev_bear  = prev["close"] < prev["open"]
+
     if last["close"] < last["bb_lower"] and last["rsi"] < RSI_OVERSOLD and stoch_up and prev_bull:
         return "buy"
     if last["close"] > last["bb_upper"] and last["rsi"] > RSI_OVERBOUGHT and stoch_down and prev_bear:
@@ -83,14 +88,14 @@ def should_exit(position, current_price, df):
     return None
 
 
-def run(symbol: str = "BTC/USDT"):
+def run(symbol: str = "SOL/USDT"):
     log_file = log_file_for(symbol)
     lock_key = f"{BOT_NAME}_{symbol}"
     init_log(log_file)
     exchange = get_exchange()
     position = None
 
-    log.info(f"Iniciado v2. Par: {symbol} | TF: {TIMEFRAME_BOT2} | RSI:{RSI_OVERSOLD}/{RSI_OVERBOUGHT}")
+    log.info(f"Iniciado v3. Par: {symbol} | TF: {TIMEFRAME_BOT2} | RSI:{RSI_OVERSOLD}/{RSI_OVERBOUGHT}")
 
     while True:
         try:
@@ -124,7 +129,7 @@ def run(symbol: str = "BTC/USDT"):
                         "size": size, "stop_loss": sl,
                         "take_profit": tp, "entry_time": datetime.utcnow(),
                     }
-                    log.info(f"[{symbol}] ENTRADA [{signal.upper()}] | {current_price} | RSI:{df['rsi'].iloc[-1]:.1f}")
+                    log.info(f"[{symbol}] ENTRADA [{signal.upper()}] | {current_price} | RSI:{df['rsi'].iloc[-1]:.1f} | SL:{sl} | TP:{tp}")
 
         except Exception as e:
             import traceback
